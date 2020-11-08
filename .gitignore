@@ -1,0 +1,9 @@
+.*
+!/.dockerignore
+!/.gitignore
+!/.scalafmt.conf
+!/.travis.yml
+logs
+target
+/RUNNING_PID
+*.sc
