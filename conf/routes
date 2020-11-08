@@ -1,0 +1,82 @@
+
+### NoDocs ###
+GET         /gh/docs/swagger-ui/*file        controllers.Assets.at(path:String="/public/lib/swagger-ui", file:String)
+
+### NoDocs ###
+GET         /gh/assets/*file                 controllers.Assets.versioned(path="/public", file: Asset)
+
+### NoDocs ###
+GET         /gh/docs                         controllers.Default.redirect(to = "/gh/docs/swagger-ui/index.html?url=/gh/assets/swagger.json")
+
+### NoDocs ###
+GET         /gh/version                      controllers.Assets.at(path="/public", file="version.json")
+
+###
+ #  summary: Get Github repositories from org
+ #  tags:
+ #    - github repositories
+ #  description: Get all Github repositories from organization given the organization name.
+ #  parameters:
+ #  - in: path
+ #    name: org
+ #    required: true
+ #    type: string
+ #    description: "Organization name"
+ #  responses:
+ #    200:
+ #      description: GitHub repositories for the given organization.
+ #      content:
+ #        application/json:
+ #         schema:
+ #           type: array
+ #           items:
+ #               $ref: '#/components/schemas/core.gh.models.Repository'
+ #    400:
+ #      description: Bad request
+ #      content:
+ #        application/json:
+ #         schema:
+ #          $ref: '#/components/schemas/core.gh.services.Errors'
+ #    500:
+ #      description: Internal Server Error
+ #      content:
+ #        application/json:
+ #         schema:
+ #          $ref: '#/components/schemas/core.gh.services.Errors'
+###
+GET         /org/:org/repositories                      core.gh.controllers.GhController.getGhRepositories(org: String)
+
+###
+ #  summary: Get Github contributors from org
+ #  tags:
+ #    - github contributors
+ #  description: Get all Github contributors from an organization given the organization name.
+ #  parameters:
+ #  - in: path
+ #    name: org
+ #    required: true
+ #    type: string
+ #    description: "Organization name"
+ #  responses:
+ #    200:
+ #      description: GitHub contributors for the given organization.
+ #      content:
+ #        application/json:
+ #         schema:
+ #           type: array
+ #           items:
+ #               $ref: '#/components/schemas/core.gh.models.Contributor'
+ #    400:
+ #      description: Bad request
+ #      content:
+ #        application/json:
+ #         schema:
+ #          $ref: '#/components/schemas/core.gh.models.response.Errors'
+ #    500:
+ #      description: Internal Server Error
+ #      content:
+ #        application/json:
+ #         schema:
+ #          $ref: '#/components/schemas/core.gh.models.response.Errors'
+###
+GET         /org/:org/contributors                      core.gh.controllers.GhController.getGhContributors(org: String)
