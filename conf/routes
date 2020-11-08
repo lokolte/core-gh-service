@@ -36,13 +36,13 @@ GET         /gh/version                      controllers.Assets.at(path="/public
  #      content:
  #        application/json:
  #         schema:
- #          $ref: '#/components/schemas/core.gh.services.Errors'
+ #          $ref: '#/components/schemas/core.gh.models.response.Errors'
  #    500:
  #      description: Internal Server Error
  #      content:
  #        application/json:
  #         schema:
- #          $ref: '#/components/schemas/core.gh.services.Errors'
+ #          $ref: '#/components/schemas/core.gh.models.response.Errors'
 ###
 GET         /org/:org/repositories                      core.gh.controllers.GhController.getGhRepositories(org: String)
 

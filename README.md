@@ -35,4 +35,4 @@ To run unit tests and generate coverage report, run:
 1. `sbt clean coverage test coverageReport`
 
 ### Quick
-Import postman.json file in your postman to test it directly.
+Import `postman.json` file in your postman to test it directly.
