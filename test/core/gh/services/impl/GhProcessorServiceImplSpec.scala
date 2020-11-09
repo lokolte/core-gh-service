@@ -7,6 +7,7 @@ import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpecLike}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.mockito.MockitoSugar
 import core.gh.models.response.{FoundRepositories, RepositoriesResponse}
+import core.gh.services.github.GitHubServiceImpl
 import core.gh.utils.Constants.GhTokenConfig.GH_WS_BASE_URL
 import core.gh.utils.GhSpecData._
 import core.gh.utils.WSClientMockUtils
@@ -35,7 +36,6 @@ class GhProcessorServiceImplSpec
   val conf                          = Configuration(ConfigFactory.load())
 
   val ghWsBaseUrl: String = conf.get[String](GH_WS_BASE_URL)
-  val organization        = "owner"
 
   val wsClient = wsClientMock(ghWsBaseUrl)
 
@@ -45,7 +45,9 @@ class GhProcessorServiceImplSpec
       .build()
 
   val ghProcessorServiceImpl =
-    new GhProcessorServiceImpl(conf, wsClient, stubControllerComponents())
+    new GhProcessorServiceImpl(
+      new GitHubApiCalls(conf, new GitHubServiceImpl(conf, wsClient, stubControllerComponents()))
+    )
 
   "hasRateLimit() method" should {
     "return FoundRateLimit when trying get the rate limit remaning for the current configured GH_TOKEN" in {
@@ -56,6 +58,7 @@ class GhProcessorServiceImplSpec
   }
 
   "getAllRepositories() method" should {
+    val organization = "owner"
     "return FoundRepositories when trying get 1 page of repositories from a valid organization with rate limit remaning" in {
       whenReady(
         ghProcessorServiceImpl.getAllRepositories(

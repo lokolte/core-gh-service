@@ -8,6 +8,9 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.Ok
 import play.api.test.Helpers.GET
 
+/**
+  * This trait to mock calls to GitHub API by WSClient, here are mocked each cases as needed
+  */
 trait WSClientMockUtils {
   def wsClientMock(baseUrl: String) = MockWS {
     case (GET, s"${baseUrl}/rate_limit") => Action { Ok(gitHubRateLimit) }

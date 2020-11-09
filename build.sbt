@@ -9,7 +9,7 @@ scalaVersion := "2.13.3"
 packageName in Universal := name.value
 
 coverageExcludedPackages := "router.*;<empty>;Reverse.*"
-coverageMinimum := 90.01
+coverageMinimum := 90.50
 coverageFailOnMinimum := true
 
 // This will create the "public/version.json" file.
