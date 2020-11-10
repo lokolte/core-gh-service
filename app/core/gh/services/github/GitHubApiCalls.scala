@@ -1,4 +1,4 @@
-package core.gh.services.impl
+package core.gh.services.github
 
 import core.gh.models.response.{
   ContributorsResponse,
@@ -7,7 +7,6 @@ import core.gh.models.response.{
   ServiceResponse
 }
 import core.gh.services.ServiceUtils
-import core.gh.services.github.GitHubServiceImpl
 import core.gh.utils.Constants.GhTokenConfig.GH_WS_BASE_URL
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration

@@ -7,7 +7,7 @@ import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpecLike}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.mockito.MockitoSugar
 import core.gh.models.response.{FoundRepositories, RepositoriesResponse}
-import core.gh.services.github.GitHubServiceImpl
+import core.gh.services.github.{GitHubApiCalls, GitHubServiceImpl}
 import core.gh.utils.Constants.GhTokenConfig.GH_WS_BASE_URL
 import core.gh.utils.GhSpecData._
 import core.gh.utils.WSClientMockUtils

@@ -15,11 +15,11 @@ import core.gh.models.response.{
   ServiceError,
   ServiceResponse
 }
+import core.gh.services.github.GitHubApiCalls
 import core.gh.utils.Constants.ErrorMessages.RATE_LIMIT_REMAINING_ERROR
-
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future, Promise, duration}
 
+import scala.concurrent.{ExecutionContext, Future, Promise, duration}
 import scala.collection.mutable
 
 @Singleton
