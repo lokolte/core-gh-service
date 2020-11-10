@@ -13,5 +13,5 @@ export JAVA_OPTS="-server \
           -Dlogger.url=file:///$APP_BASE/target/core-gh-service/conf/logback.xml \
           -Denvironment=${ENVIRONMENT_NAME}"
 
-unzip /core/target/universal/core-gh-service.zip -d /core/target
+unzip -n /core/target/universal/core-gh-service.zip -d /core/target
 /core/target/core-gh-service/bin/core-gh-service
