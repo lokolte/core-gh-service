@@ -8,6 +8,8 @@ final case class ServiceError(errMsg: String) extends ServiceResponse
 
 final case class NotFound(errorKey: String) extends ServiceResponse
 
+final case class NoContent() extends ServiceResponse
+
 final case class ErrorMessage(errorKey: String) extends ServiceResponse
 
 final case class FoundContributors(contributorsResponse: ContributorsResponse,

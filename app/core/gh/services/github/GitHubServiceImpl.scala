@@ -7,6 +7,7 @@ import core.gh.models.response.{
   FoundContributors,
   FoundRateLimit,
   FoundRepositories,
+  NoContent,
   NotFound,
   RateLimitResponse,
   RepositoriesResponse,
@@ -24,14 +25,13 @@ import play.api.libs.ws.{WSClient, WSRequest}
 import play.api.libs.json._
 import play.api.http.HeaderNames.{ACCEPT, AUTHORIZATION}
 import play.api.http.ContentTypes.JSON
-import play.api.http.Status.{FORBIDDEN, NOT_FOUND}
+import play.api.http.Status.{FORBIDDEN, NOT_FOUND, NO_CONTENT}
 import play.api.mvc.ControllerComponents
 import play.api.libs.ws.WSResponse
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-
 import scala.util.{Failure, Success, Try}
 
 @Singleton
@@ -84,42 +84,44 @@ class GitHubServiceImpl @Inject() (conf: Configuration,
     *        or a `FoundRepositories`, or `FoundContributors`, or `FoundRateLimit` if it's success
     */
   private def processJson[R](response: WSResponse)(implicit reads: Reads[R]): ServiceResponse = {
-    Try(Json.parse(response.body).validate[R]) match {
-      case Success(jsvalue) =>
-        jsvalue match {
-          case JsSuccess(responseObject, _) =>
-            logger.info(s"Valid json, converte object: ${responseObject}")
-            val delay = response.header(RETRY_AFTER).getOrElse("0").toInt
+    if (response.status == FORBIDDEN)
+      ErrorMessage(RATE_LIMIT_REMAINING_ERROR_REST)
+    else if (response.status == NOT_FOUND)
+      NotFound(RESOURCE_NOTFOUND)
+    else if (response.status == NO_CONTENT)
+      NoContent()
+    else
+      Try(Json.parse(response.body).validate[R]) match {
+        case Success(jsvalue) =>
+          jsvalue match {
+            case JsSuccess(responseObject, _) =>
+              val delay = response.header(RETRY_AFTER).getOrElse("0").toInt
 
-            responseObject match {
-              case repositoryResponse: RepositoriesResponse => {
-                FoundRepositories(repositoryResponse,
-                                  delay,
-                                  getLinkPagesHeader(response.header(LINK)))
+              responseObject match {
+                case repositoryResponse: RepositoriesResponse => {
+                  FoundRepositories(repositoryResponse,
+                                    delay,
+                                    getLinkPagesHeader(response.header(LINK)))
+                }
+                case contributorsResponse: ContributorsResponse => {
+                  FoundContributors(contributorsResponse,
+                                    delay,
+                                    getLinkPagesHeader(response.header(LINK)))
+                }
+                case rateLimitResponse: RateLimitResponse => {
+                  FoundRateLimit(rateLimitResponse)
+                }
               }
-              case contributorsResponse: ContributorsResponse => {
-                FoundContributors(contributorsResponse,
-                                  delay,
-                                  getLinkPagesHeader(response.header(LINK)))
-              }
-              case rateLimitResponse: RateLimitResponse => {
-                FoundRateLimit(rateLimitResponse)
-              }
-            }
 
-          case JsError(errors) =>
-            logger.error(s"Invalid json: ${response.body}, errors: $errors")
-            if (response.status == FORBIDDEN)
-              ErrorMessage(RATE_LIMIT_REMAINING_ERROR_REST)
-            else if (response.status == NOT_FOUND) {
-              NotFound(RESOURCE_NOTFOUND)
-            } else ServiceError(s"Invalid json: ${response.body}, errors: $errors")
-        }
-      case Failure(exception) =>
-        logger.error(s"Exception when parsing json ${response.body}", exception)
-        ServiceError(
-          s"Exception when parsing json:${response.body}, Exception: $exception"
-        )
-    }
+            case JsError(errors) =>
+              logger.error(s"Invalid json: ${response.body}, errors: $errors")
+              ServiceError(s"Invalid json: ${response.body}, errors: $errors")
+          }
+        case Failure(exception) =>
+          logger.error(s"Exception when parsing json ${response.body}", exception)
+          ServiceError(
+            s"Exception when parsing json:${response.body}, Exception: $exception"
+          )
+      }
   }
 }
