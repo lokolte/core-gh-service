@@ -3,6 +3,7 @@ package core.gh.services.impl
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
+import core.gh.models.response.headers.LinkPages
 import core.gh.models.{Contributor, Repository}
 import core.gh.models.response.{
   ContributorsResponse,
@@ -10,6 +11,7 @@ import core.gh.models.response.{
   FoundContributors,
   FoundRateLimit,
   FoundRepositories,
+  NoContent,
   NotFound,
   RepositoriesResponse,
   ServiceError,
@@ -18,6 +20,7 @@ import core.gh.models.response.{
 import core.gh.services.github.GitHubApiCalls
 import core.gh.utils.Constants.ErrorMessages.RATE_LIMIT_REMAINING_ERROR
 import javax.inject.{Inject, Singleton}
+import play.api.Logging
 
 import scala.concurrent.{ExecutionContext, Future, Promise, duration}
 import scala.collection.mutable
@@ -26,7 +29,7 @@ import scala.collection.mutable
 class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
     implicit val system: ActorSystem,
     ec: ExecutionContext
-) {
+) extends Logging {
 
   def hasRateLimit(): Future[ServiceResponse] = {
     gitHubApiCalls.hasRateLimit().map {
@@ -39,6 +42,7 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
   }
 
   def getAllRepositories(organization: String): Future[ServiceResponse] = {
+    logger.info(s"Repositories from: org=[$organization]")
     getRepositoriesByPages(
       organization
     )
@@ -60,38 +64,26 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
   private def getRepositoriesByPages(
       organization: String,
       page: Int = 0,
-      foundRepositoriesAcumulator: FoundRepositories = FoundRepositories(
-        RepositoriesResponse(Some(Seq()))
-      )
+      foundRepositoriesAcumulator: FoundRepositories = createFoundRepository(Seq())
   ): Future[ServiceResponse] = {
     gitHubApiCalls.getRepositories(organization, page).flatMap {
-      case serviceError: ServiceError => Future.successful(serviceError)
-      case notFound: NotFound         => Future.successful(notFound)
-      case errorMessage: ErrorMessage => Future.successful(errorMessage)
+      case NoContent() => Future.successful(foundRepositoriesAcumulator)
       case foundRepositories: FoundRepositories =>
         foundRepositories.linkPages match {
           case None => // the first page is the only one
             Future.successful(
-              FoundRepositories(
-                RepositoriesResponse(
-                  Some(
-                    foundRepositories.repositoryResponse.repositories.get ++ foundRepositoriesAcumulator.repositoryResponse.repositories
-                      .getOrElse(Seq())
-                  )
-                )
+              createFoundRepository(
+                foundRepositories.repositoryResponse.repositories.get ++ foundRepositoriesAcumulator.repositoryResponse.repositories
+                  .getOrElse(Seq())
               )
             )
           case Some(linkPages) =>
             linkPages.next match {
               case None => // this is the last page because there is not next
                 Future.successful(
-                  FoundRepositories(
-                    RepositoriesResponse(
-                      Some(
-                        foundRepositories.repositoryResponse.repositories.get ++ foundRepositoriesAcumulator.repositoryResponse.repositories
-                          .getOrElse(Seq())
-                      )
-                    )
+                  createFoundRepository(
+                    foundRepositories.repositoryResponse.repositories.get ++ foundRepositoriesAcumulator.repositoryResponse.repositories
+                      .getOrElse(Seq())
                   )
                 )
               case Some(nextPage) => // move to the next page
@@ -99,13 +91,9 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
                   getRepositoriesByPages(
                     organization,
                     nextPage,
-                    FoundRepositories(
-                      RepositoriesResponse(
-                        Some(
-                          foundRepositories.repositoryResponse.repositories.get ++ foundRepositoriesAcumulator.repositoryResponse.repositories
-                            .getOrElse(Seq())
-                        )
-                      )
+                    createFoundRepository(
+                      foundRepositories.repositoryResponse.repositories.get ++ foundRepositoriesAcumulator.repositoryResponse.repositories
+                        .getOrElse(Seq())
                     )
                   )
                 else { // move with delay
@@ -117,13 +105,9 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
                       getRepositoriesByPages(
                         organization,
                         nextPage,
-                        FoundRepositories(
-                          RepositoriesResponse(
-                            Some(
-                              foundRepositories.repositoryResponse.repositories.get ++ foundRepositoriesAcumulator.repositoryResponse.repositories
-                                .getOrElse(Seq())
-                            )
-                          )
+                        createFoundRepository(
+                          foundRepositories.repositoryResponse.repositories.get ++ foundRepositoriesAcumulator.repositoryResponse.repositories
+                            .getOrElse(Seq())
                         )
                       )
                     )
@@ -132,7 +116,20 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
                 }
             }
         }
+      case other => Future.successful(other)
     }
+  }
+
+  private def createFoundRepository(repositories: Seq[Repository],
+                                    retryAfter: Int = 0,
+                                    linkPages: Option[LinkPages] = None): FoundRepositories = {
+    FoundRepositories(
+      RepositoriesResponse(
+        Some(repositories)
+      ),
+      retryAfter,
+      linkPages
+    )
   }
 
   /**
@@ -146,36 +143,31 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
   def getAllContributorsForRepository(
       repositories: Seq[Repository],
       index: Int = 0,
-      foundContributorsAcumulator: FoundContributors = FoundContributors(
-        ContributorsResponse(Some(Seq()))
-      )
+      foundContributorsAcumulator: FoundContributors = createFoundContributor(Seq())
   ): Future[ServiceResponse] = {
-    if (repositories.nonEmpty && index < repositories.size)
+    if (repositories.nonEmpty && index < repositories.size) {
+      logger.info(
+        s"Contributors from: repository=[${repositories(index).name}] for org=[${repositories(index).owner.login}]"
+      )
       getContributorsByPages(
         repositories(index).owner.login,
         repositories(index).name,
-        foundContributorsAcumulator =
-          FoundContributors(ContributorsResponse(Some(Seq())), linkPages = None)
+        foundContributorsAcumulator = createFoundContributor(Seq())
       ).flatMap {
-        case serviceError: ServiceError => Future.successful(serviceError)
-        case notFound: NotFound         => Future.successful(notFound)
-        case errorMessage: ErrorMessage => Future.successful(errorMessage)
+        case NoContent() => Future.successful(foundContributorsAcumulator)
         case foundContributors: FoundContributors =>
           getAllContributorsForRepository(
             repositories,
             index + 1,
-            FoundContributors(
-              ContributorsResponse(
-                Some(
-                  foundContributors.contributorsResponse.contributors
-                    .getOrElse(Seq()) ++ foundContributorsAcumulator.contributorsResponse.contributors
-                    .getOrElse(Seq())
-                )
-              )
+            createFoundContributor(
+              foundContributors.contributorsResponse.contributors
+                .getOrElse(Seq()) ++ foundContributorsAcumulator.contributorsResponse.contributors
+                .getOrElse(Seq())
             )
           )
+        case other => Future.successful(other)
       }
-    else Future.successful(foundContributorsAcumulator)
+    } else Future.successful(foundContributorsAcumulator)
   }
 
   /**
@@ -205,33 +197,23 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
         page
       )
       .flatMap {
-        case serviceError: ServiceError => Future.successful(serviceError)
-        case notFound: NotFound         => Future.successful(notFound)
-        case errorMessage: ErrorMessage => Future.successful(errorMessage)
+        case NoContent() => Future.successful(foundContributorsAcumulator)
         case foundContributors: FoundContributors =>
           foundContributors.linkPages match {
             case None => // the first page is the only one
               Future.successful(
-                FoundContributors(
-                  ContributorsResponse(
-                    Some(
-                      foundContributors.contributorsResponse.contributors.get ++ foundContributorsAcumulator.contributorsResponse.contributors
-                        .getOrElse(Seq())
-                    )
-                  )
+                createFoundContributor(
+                  foundContributors.contributorsResponse.contributors.get ++ foundContributorsAcumulator.contributorsResponse.contributors
+                    .getOrElse(Seq())
                 )
               )
             case Some(linkPages) =>
               linkPages.next match {
                 case None => // this is the last page because there is not next
                   Future.successful(
-                    FoundContributors(
-                      ContributorsResponse(
-                        Some(
-                          foundContributors.contributorsResponse.contributors.get ++ foundContributorsAcumulator.contributorsResponse.contributors
-                            .getOrElse(Seq())
-                        )
-                      )
+                    createFoundContributor(
+                      foundContributors.contributorsResponse.contributors.get ++ foundContributorsAcumulator.contributorsResponse.contributors
+                        .getOrElse(Seq())
                     )
                   )
                 case Some(nextPage) => // move to the next page
@@ -240,17 +222,13 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
                       organization,
                       repository,
                       nextPage,
-                      FoundContributors(
-                        ContributorsResponse(
-                          Some(
-                            foundContributors.contributorsResponse.contributors.get ++ foundContributorsAcumulator.contributorsResponse.contributors
-                              .getOrElse(Seq())
-                          )
-                        )
+                      createFoundContributor(
+                        foundContributors.contributorsResponse.contributors.get ++ foundContributorsAcumulator.contributorsResponse.contributors
+                          .getOrElse(Seq())
                       )
                     )
                   else { // move with delay
-                    val promise = Promise[ServiceResponse]
+                    val promise = Promise[ServiceResponse]()
                     system.scheduler.scheduleOnce(delay =
                       duration.Duration(foundContributors.retryAfter, TimeUnit.SECONDS)
                     ) {
@@ -259,13 +237,9 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
                           organization,
                           repository,
                           nextPage,
-                          FoundContributors(
-                            ContributorsResponse(
-                              Some(
-                                foundContributors.contributorsResponse.contributors.get ++ foundContributorsAcumulator.contributorsResponse.contributors
-                                  .getOrElse(Seq())
-                              )
-                            )
+                          createFoundContributor(
+                            foundContributors.contributorsResponse.contributors.get ++ foundContributorsAcumulator.contributorsResponse.contributors
+                              .getOrElse(Seq())
                           )
                         )
                       )
@@ -274,7 +248,20 @@ class GhProcessorServiceImpl @Inject() (gitHubApiCalls: GitHubApiCalls)(
                   }
               }
           }
+        case other => Future.successful(other)
       }
+  }
+
+  private def createFoundContributor(contributors: Seq[Contributor],
+                                     retryAfter: Int = 0,
+                                     linkPages: Option[LinkPages] = None): FoundContributors = {
+    FoundContributors(
+      ContributorsResponse(
+        Some(contributors)
+      ),
+      retryAfter,
+      linkPages
+    )
   }
 
   /**

@@ -9,7 +9,7 @@ scalaVersion := "2.13.3"
 packageName in Universal := name.value
 
 coverageExcludedPackages := "router.*;<empty>;Reverse.*"
-coverageMinimum := 90.50
+coverageMinimum := 91.74
 coverageFailOnMinimum := true
 
 // This will create the "public/version.json" file.
@@ -19,13 +19,13 @@ libraryDependencies ++= Seq(
   guice,
   ws,
   caffeine,
-  "org.scalatestplus.play"  %% "scalatestplus-play"      % "5.0.0" % Test,
-  "org.webjars"             % "swagger-ui"               % "3.25.0",
-  "org.mockito"             % "mockito-core"             % "3.3.3",
-  "net.logstash.logback"    % "logstash-logback-encoder" % "6.3",
-  "ch.qos.logback"          % "logback-classic"          % "1.2.3" % Test,
-  "com.typesafe.akka"       %% "akka-testkit"            % "2.6.1" % Test,
-  "de.leanovate.play-mockws" %% "play-mockws" % "2.8.0" % Test,
+  "org.scalatestplus.play"   %% "scalatestplus-play"      % "5.0.0" % Test,
+  "org.webjars"              % "swagger-ui"               % "3.25.0",
+  "org.mockito"              % "mockito-core"             % "3.3.3" % Test,
+  "net.logstash.logback"     % "logstash-logback-encoder" % "6.3",
+  "ch.qos.logback"           % "logback-classic"          % "1.2.3" % Test,
+  "com.typesafe.akka"        %% "akka-testkit"            % "2.6.1" % Test,
+  "de.leanovate.play-mockws" %% "play-mockws"             % "2.8.0" % Test,
 )
 
 scalafmtOnCompile := true

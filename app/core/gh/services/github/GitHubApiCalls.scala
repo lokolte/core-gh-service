@@ -39,5 +39,4 @@ class GitHubApiCalls @Inject() (conf: Configuration, gitHubServiceImpl: GitHubSe
       page
     )
   }
-
 }
