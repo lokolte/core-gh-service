@@ -1,0 +1,5 @@
+error.invalid.value=This is an invalid value.
+error.required.field=There are required fields.
+rate.limit.remaining=No rate remain left.
+rate.limit.remaining.rest=No rate limit remain left for the rest of the request.
+resource.not.found=Resource not found.

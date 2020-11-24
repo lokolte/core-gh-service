@@ -1,0 +1,75 @@
+{
+	"info": {
+		"_postman_id": "868897c6-675c-4c0e-b740-896642b8f587",
+		"name": "GH Service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get all contributors",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "75cc6da6-fe8e-4a56-98ca-f8cab025e84c",
+						"exec": [
+							"var tests;"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://{{host}}/org/:org/contributors",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"org",
+						":org",
+						"contributors"
+					],
+					"variable": [
+						{
+							"key": "org",
+							"value": "octocat"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Version",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://{{host}}/gh/version",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"gh",
+						"version"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
